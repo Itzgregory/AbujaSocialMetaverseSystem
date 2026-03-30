@@ -2,7 +2,7 @@
 
 ### Phase 1 — Project Structure & Setup
 - [x] Create solution and project scaffold 
-- [ ] Wire project references (who depends on who)
+- [x] Wire project references (who depends on who)
 - [ ] Install NuGet packages per project
 - [ ] Create folder structure inside each project
 - [ ] Configure Program.cs, appsettings.json
@@ -36,8 +36,3 @@
 - [ ] Controllers (Auth, Business, Recommendations, Social, Map, Admin, Privacy)
 - [ ] SignalR Hubs (AvatarHub, ChatHub)
 
----
-
-**Current position: Step 2 — Project references.**
-
-Ready to proceed?
