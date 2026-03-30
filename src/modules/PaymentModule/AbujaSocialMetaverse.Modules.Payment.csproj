@@ -1,5 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\AbujaSocialMetaverse.Shared.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\AbujaSocialMetaverse.Infrastructure.csproj" />
+    <ProjectReference Include="..\CoreModule\AbujaSocialMetaverse.Modules.Core.csproj" />
+    <ProjectReference Include="..\BusinessModule\AbujaSocialMetaverse.Modules.Business.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
