@@ -1,0 +1,40 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AbujaSocialMetaverse.API/AbujaSocialMetaverse.API.csproj" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="src/Infrastructure/AbujaSocialMetaverse.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/AdminModule/">
+    <Project Path="src/modules/AdminModule/AbujaSocialMetaverse.Modules.Admin.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/BusinessModule/">
+    <Project Path="src/modules/BusinessModule/AbujaSocialMetaverse.Modules.Business.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/CoreModule/">
+    <Project Path="src/modules/CoreModule/AbujaSocialMetaverse.Modules.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/MapModule/">
+    <Project Path="src/modules/MapModule/AbujaSocialMetaverse.Modules.Map.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/PaymentModule/">
+    <Project Path="src/modules/PaymentModule/AbujaSocialMetaverse.Modules.Payment.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/PrivacyModule/">
+    <Project Path="src/modules/PrivacyModule/AbujaSocialMetaverse.Modules.Privacy.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/SocialModule/">
+    <Project Path="src/modules/SocialModule/AbujaSocialMetaverse.Modules.Social.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/AbujaSocialMetaverse.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BusinessModule.Tests/BusinessModule.Tests.csproj" />
+    <Project Path="tests/CoreModule.Tests/CoreModule.Tests.csproj" />
+    <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
+    <Project Path="tests/PrivacyModule.Tests/PrivacyModule.Tests.csproj" />
+    <Project Path="tests/SocialModule.Tests/SocialModule.Tests.csproj" />
+  </Folder>
+</Solution>
