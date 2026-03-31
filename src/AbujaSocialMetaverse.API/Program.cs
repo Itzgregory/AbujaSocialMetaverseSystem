@@ -1,12 +1,15 @@
 using AbujaSocialMetaverse.API;
 using AbujaSocialMetaverse.API.Middleware;
+using AbujaSocialMetaverse.Infrastructure.Data;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using StackExchange.Redis;
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 
 // Load .env 
@@ -75,10 +78,15 @@ builder.Services.AddSignalR()
     });
 
 // Database 
-// builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//     options.UseNpgsql(
-//         dbConnection,
-//         npgsql => npgsql.UseNetTopologySuite()));
+builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
+    options.UseNpgsql(
+        dbConnection,
+        npgsql => npgsql.UseNetTopologySuite())
+    .UseSnakeCaseNamingConvention()
+    .EnableDetailedErrors(builder.Environment.IsDevelopment())
+    .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // CORS 
 builder.Services.AddCors(options =>
@@ -147,9 +155,23 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         context.HttpContext.Response.ContentType = "application/problem+json";
-        await context.HttpContext.Response.WriteAsync(
-            """{"type":"https://httpstatuses.com/429","title":"Too Many Requests","status":429,"detail":"Rate limit exceeded. Please slow down."}""",
-            cancellationToken);
+
+        var problem = new
+        {
+            type = "https://httpstatuses.com/429",
+            title = "Too Many Requests",
+            status = 429,
+            detail = "Rate limit exceeded. Please slow down.",
+            instance = context.HttpContext.Request.Path.ToString(),
+            traceId = context.HttpContext.TraceIdentifier
+        };
+
+        var json = JsonSerializer.Serialize(problem, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        await context.HttpContext.Response.WriteAsync(json, cancellationToken);
     };
 });
 

@@ -3,25 +3,41 @@ using System.Text.Json;
 
 namespace AbujaSocialMetaverse.API.Middleware;
 
-public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+public class GlobalExceptionMiddleware
 {
+    private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IHostEnvironment _env;
+
+    public GlobalExceptionMiddleware(
+        RequestDelegate next,
+        ILogger<GlobalExceptionMiddleware> logger,
+        IHostEnvironment env)
+    {
+        _next = next;
+        _logger = logger;
+        _env = env;
+    }
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await next(context);
+            await _next(context);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception on {Method} {Path}",
+            _logger.LogError(ex,
+                "Unhandled exception on {Method} {Path} | TraceId: {TraceId}",
                 context.Request.Method,
-                context.Request.Path);
+                context.Request.Path,
+                context.TraceIdentifier);
 
             await WriteErrorResponse(context, ex);
         }
     }
 
-    private static async Task WriteErrorResponse(HttpContext context, Exception ex)
+    private async Task WriteErrorResponse(HttpContext context, Exception ex)
     {
         context.Response.ContentType = "application/problem+json";
 
@@ -37,12 +53,18 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
 
         context.Response.StatusCode = (int)statusCode;
 
+        // In development, expose the real error message for debugging
+        // In production, return a safe generic message — full details go to logs only
+        var detail = _env.IsDevelopment()
+            ? ex.Message
+            : "An error occurred processing your request. Please try again later.";
+
         var problem = new
         {
             type = $"https://httpstatuses.com/{(int)statusCode}",
             title,
             status = (int)statusCode,
-            detail = ex.Message,
+            detail,
             instance = context.Request.Path.ToString(),
             traceId = context.TraceIdentifier
         };
