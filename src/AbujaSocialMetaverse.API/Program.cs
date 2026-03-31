@@ -1,16 +1,26 @@
+using AbujaSocialMetaverse.API;
+using AbujaSocialMetaverse.API.Middleware;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using StackExchange.Redis;
 using System.Text;
+using System.Threading.RateLimiting;
 
 // Load .env 
 Env.Load();
 
+// Validate required env vars 
+StartupValidation.Validate();
+StartupValidation.ValidateJwtKey();
+
 // Build connection strings from env vars 
 var dbConnection = $"Host={Env.GetString("DB_HOST")};Port={Env.GetString("DB_PORT")};Database={Env.GetString("DB_NAME")};Username={Env.GetString("DB_USER")};Password={Env.GetString("DB_PASSWORD")}";
 var redisConnection = Env.GetString("REDIS_CONNECTION");
+var corsOrigins = Env.GetString("CORS_ALLOWED_ORIGINS")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,10 +41,20 @@ builder.Configuration["Paystack:BaseUrl"] = Env.GetString("PAYSTACK_BASE_URL");
 
 // Serilog 
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
+    .MinimumLevel.Is(Enum.Parse<Serilog.Events.LogEventLevel>(
+        Env.GetString("LOG_LEVEL", "Information")))
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/abuja-metaverse-.log", rollingInterval: RollingInterval.Day)
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .WriteTo.File(
+        Env.GetString("LOG_FILE_PATH", "logs/abuja-metaverse-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -66,7 +86,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowUnityClient", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -86,7 +106,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ClockSkew = TimeSpan.Zero
         };
 
         options.Events = new JwtBearerEvents
@@ -107,21 +128,59 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Rate Limiting 
+var permitLimit = Env.GetInt("RATE_LIMIT_PERMIT_LIMIT", 100);
+var windowSeconds = Env.GetInt("RATE_LIMIT_WINDOW_SECONDS", 60);
+var queueLimit = Env.GetInt("RATE_LIMIT_QUEUE_LIMIT", 10);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = permitLimit;
+        limiterOptions.Window = TimeSpan.FromSeconds(windowSeconds);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = queueLimit;
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsync(
+            """{"type":"https://httpstatuses.com/429","title":"Too Many Requests","status":429,"detail":"Rate limit exceeded. Please slow down."}""",
+            cancellationToken);
+    };
+});
+
+// Health Checks
+builder.Services.AddHealthChecks();
+
+
 // Build 
 var app = builder.Build();
 
 // Middleware Pipeline 
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
+});
+
 app.UseHttpsRedirection();
 app.UseCors("AllowUnityClient");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 // SignalR Hubs 
 // app.MapHub<AvatarHub>("/hubs/avatar");
