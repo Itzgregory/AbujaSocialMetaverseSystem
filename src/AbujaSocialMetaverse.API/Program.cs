@@ -1,6 +1,7 @@
 using AbujaSocialMetaverse.API;
 using AbujaSocialMetaverse.API.Middleware;
 using AbujaSocialMetaverse.Infrastructure.Data;
+using AbujaSocialMetaverse.Infrastructure.Caching;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -76,6 +77,14 @@ builder.Services.AddSignalR()
             "AbujaSocialMetaverse",
             RedisChannel.PatternMode.Literal);
     });
+
+// redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisConnection));
+
+builder.Services.AddScoped<ICacheService, RedisCacheService>();
+builder.Services.AddScoped<ILocationCacheService, RedisLocationCacheService>();
+builder.Services.AddScoped<ICacheAdminService, RedisCacheAdminService>();
 
 // Database 
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
