@@ -6,13 +6,14 @@
 - [x] Install NuGet packages
 - [x] Create folder structure
 - [x] Configure Program.cs, appsettings.json, .env
-- [ ] Set up docker-compose (deferred to end of Phase 1)
+- [ ] Set up docker-compose (deferred)
 
 ### Phase 2 — Infrastructure
 - [x] ApplicationDbContext + EF Core config
 - [x] ISoftDeletable, IAuditableEntity, BaseEntity
 - [x] UnitOfWork
-- [ ] Redis cache service (ICacheService)
+- [x] Redis cache service (ICacheService, ILocationCacheService, ICacheAdminService)
+- [x] CacheKeys
 - [ ] IRealTimeService abstraction + SignalR implementation
 - [ ] Hangfire background jobs
 - [ ] Serilog logging
@@ -37,5 +38,3 @@
 - [ ] Middleware (RateLimiting, Logging) — partially done
 - [ ] Controllers
 - [ ] SignalR Hubs
-
-**Current position: Phase 2, Step 2 — Redis cache service.**
