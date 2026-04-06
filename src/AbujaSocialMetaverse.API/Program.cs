@@ -4,9 +4,11 @@ using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Infrastructure.Caching;
 using AbujaSocialMetaverse.Infrastructure.RealTime;
 using AbujaSocialMetaverse.Infrastructure.BackgroundJobs;
+using AbujaSocialMetaverse.Shared.Configuration;
+using AbujaSocialMetaverse.Shared.Configuration.Options;
+using DotNetEnv;
 using Hangfire;
 using Hangfire.PostgreSql;
-using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -17,125 +19,158 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 
-// Load .env 
+// Load .env
 Env.Load();
 
-// Validate required env vars 
-StartupValidation.Validate();
-StartupValidation.ValidateJwtKey();
-
-// Build connection strings from env vars 
-var dbConnection = $"Host={Env.GetString("DB_HOST")};Port={Env.GetString("DB_PORT")};Database={Env.GetString("DB_NAME")};Username={Env.GetString("DB_USER")};Password={Env.GetString("DB_PASSWORD")}";
-var redisConnection = Env.GetString("REDIS_CONNECTION");
-var corsOrigins = Env.GetString("CORS_ALLOWED_ORIGINS")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+// Map env vars into IConfiguration
+var envMappings = new Dictionary<string, string?>
+{
+    ["Database:Host"] = Env.GetString("DB_HOST"),
+    ["Database:Port"] = Env.GetString("DB_PORT"),
+    ["Database:Name"] = Env.GetString("DB_NAME"),
+    ["Database:Username"] = Env.GetString("DB_USER"),
+    ["Database:Password"] = Env.GetString("DB_PASSWORD"),
+    ["Redis:Host"] = Env.GetString("REDIS_HOST"),
+    ["Redis:Port"] = Env.GetString("REDIS_PORT"),
+    ["Redis:Password"] = Env.GetString("REDIS_PASSWORD"),
+    ["Jwt:SecretKey"] = Env.GetString("JWT_SECRET_KEY"),
+    ["Jwt:Issuer"] = Env.GetString("JWT_ISSUER"),
+    ["Jwt:Audience"] = Env.GetString("JWT_AUDIENCE"),
+    ["Jwt:ExpiryMinutes"] = Env.GetString("JWT_EXPIRY_MINUTES"),
+    ["Jwt:RefreshExpiryDays"] = Env.GetString("JWT_REFRESH_EXPIRY_DAYS"),
+    ["Mapbox:AccessToken"] = Env.GetString("MAPBOX_ACCESS_TOKEN"),
+    ["Mapbox:BaseUrl"] = Env.GetString("MAPBOX_BASE_URL"),
+    ["Stripe:SecretKey"] = Env.GetString("STRIPE_SECRET_KEY"),
+    ["Stripe:WebhookSecret"] = Env.GetString("STRIPE_WEBHOOK_SECRET"),
+    ["Paystack:SecretKey"] = Env.GetString("PAYSTACK_SECRET_KEY"),
+    ["Paystack:BaseUrl"] = Env.GetString("PAYSTACK_BASE_URL"),
+    ["Cors:AllowedOrigins"] = Env.GetString("CORS_ALLOWED_ORIGINS"),
+    ["Logging:MinimumLevel"] = Env.GetString("LOG_LEVEL"),
+    ["Logging:FilePath"] = Env.GetString("LOG_FILE_PATH"),
+    ["RateLimit:PermitLimit"] = Env.GetString("RATE_LIMIT_PERMIT_LIMIT"),
+    ["RateLimit:WindowSeconds"] = Env.GetString("RATE_LIMIT_WINDOW_SECONDS"),
+    ["RateLimit:QueueLimit"] = Env.GetString("RATE_LIMIT_QUEUE_LIMIT"),
+};
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Override config with env values 
-builder.Configuration["ConnectionStrings:DefaultConnection"] = dbConnection;
-builder.Configuration["ConnectionStrings:Redis"] = redisConnection;
-builder.Configuration["Jwt:Key"] = Env.GetString("JWT_KEY");
-builder.Configuration["Jwt:Issuer"] = Env.GetString("JWT_ISSUER");
-builder.Configuration["Jwt:Audience"] = Env.GetString("JWT_AUDIENCE");
-builder.Configuration["Jwt:ExpiryMinutes"] = Env.GetString("JWT_EXPIRY_MINUTES");
-builder.Configuration["Jwt:RefreshExpiryDays"] = Env.GetString("JWT_REFRESH_EXPIRY_DAYS");
-builder.Configuration["Mapbox:AccessToken"] = Env.GetString("MAPBOX_ACCESS_TOKEN");
-builder.Configuration["Mapbox:BaseUrl"] = Env.GetString("MAPBOX_BASE_URL");
-builder.Configuration["Stripe:SecretKey"] = Env.GetString("STRIPE_SECRET_KEY");
-builder.Configuration["Stripe:WebhookSecret"] = Env.GetString("STRIPE_WEBHOOK_SECRET");
-builder.Configuration["Paystack:SecretKey"] = Env.GetString("PAYSTACK_SECRET_KEY");
-builder.Configuration["Paystack:BaseUrl"] = Env.GetString("PAYSTACK_BASE_URL");
+// Inject env mappings into IConfiguration
+builder.Configuration.AddInMemoryCollection(
+    envMappings.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value)));
 
-// Serilog 
+// Register and validate all options
+builder.Services.AddApplicationOptions(builder.Configuration);
+
+// SUPPRESS THE WARNING ONLY FOR THIS SPECIFIC BLOCK
+#pragma warning disable ASP0000
+var sp = builder.Services.BuildServiceProvider();
+var dbOptions = sp.GetRequiredService<DatabaseOptions>();
+var redisOptions = sp.GetRequiredService<RedisOptions>();
+var jwtOptions = sp.GetRequiredService<JwtOptions>();
+var corsOptions = sp.GetRequiredService<CorsOptions>();
+var rateLimitOptions = sp.GetRequiredService<RateLimitOptions>();
+var hangfireOptions = sp.GetRequiredService<HangfireOptions>();
+var loggingOptions = sp.GetRequiredService<LoggingOptions>();
+#pragma warning restore ASP0000
+
+// Serilog (no change needed - this part is fine)
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Is(Enum.Parse<Serilog.Events.LogEventLevel>(
-        Env.GetString("LOG_LEVEL", "Information")))
+        loggingOptions.MinimumLevel, ignoreCase: true))
     .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command",
+        Serilog.Events.LogEventLevel.Information)
+    .MinimumLevel.Override("Hangfire", Serilog.Events.LogEventLevel.Warning)
     .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .Enrich.WithMachineName()
     .Enrich.WithThreadId()
+    .Enrich.WithProperty("Application", "AbujaSocialMetaverse")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Console(outputTemplate:
-        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+        "[{Timestamp:HH:mm:ss} {Level:u3}] [{Application}] {Message:lj} {Properties:j}{NewLine}{Exception}")
     .WriteTo.File(
-        Env.GetString("LOG_FILE_PATH", "logs/abuja-metaverse-.log"),
+        loggingOptions.FilePath,
         rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 30)
+        retainedFileCountLimit: loggingOptions.RetainedFileCount,
+        outputTemplate:
+            "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{Application}] [{Environment}] {Message:lj} {Properties:j}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// Controllers 
+// Controllers
 builder.Services.AddControllers();
 
-// OpenAPI 
+// OpenAPI
 builder.Services.AddOpenApi();
 
-// SignalR + Redis Backplane 
+// SignalR + Redis Backplane
 builder.Services.AddSignalR()
-    .AddStackExchangeRedis(redisConnection, options =>
+    .AddStackExchangeRedis(redisOptions.ConnectionString, options =>
     {
         options.Configuration.ChannelPrefix = new RedisChannel(
-            "AbujaSocialMetaverse",
+            redisOptions.ChannelPrefix,
             RedisChannel.PatternMode.Literal);
     });
 
-// redis
+// Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(redisConnection));
+    ConnectionMultiplexer.Connect(redisOptions.ConnectionString));
 
 builder.Services.AddScoped<ICacheService, RedisCacheService>();
 builder.Services.AddScoped<ILocationCacheService, RedisLocationCacheService>();
 builder.Services.AddScoped<ICacheAdminService, RedisCacheAdminService>();
 
-// Real-Time Service 
-builder.Services.AddSingleton<IConnectionTracker, RedisConnectionTracker>();
+// Real-Time Service
+builder.Services.AddScoped<IConnectionTracker, RedisConnectionTracker>();
 builder.Services.AddScoped<IRealTimeService, SignalRRealTimeService>();
 
-// Hangfire 
+// Hangfire
 builder.Services.AddHangfire(config =>
     config
         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
         .UsePostgreSqlStorage(options =>
-            options.UseNpgsqlConnection(dbConnection)));
+            options.UseNpgsqlConnection(dbOptions.ConnectionString)));
 
 builder.Services.AddHangfireServer(options =>
 {
-    options.WorkerCount = Environment.ProcessorCount * 2;
-    options.Queues = ["critical", "default", "low"];
+    options.WorkerCount = hangfireOptions.WorkerCount;
+    options.Queues = hangfireOptions.Queues;
 });
 
 builder.Services.AddScoped<IBackgroundJobService, HangfireBackgroundJobService>();
 
-// Database 
+// Database
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        dbConnection,
+        dbOptions.ConnectionString,
         npgsql => npgsql.UseNetTopologySuite())
     .UseSnakeCaseNamingConvention()
-    .EnableDetailedErrors(builder.Environment.IsDevelopment())
-    .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
+    .EnableDetailedErrors(dbOptions.EnableDetailedErrors)
+    .EnableSensitiveDataLogging(dbOptions.EnableSensitiveDataLogging));
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// CORS 
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowUnityClient", policy =>
+    options.AddPolicy(corsOptions.PolicyName, policy =>
     {
         policy
-            .WithOrigins(corsOrigins)
+            .WithOrigins(corsOptions.AllowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
+
+        if (corsOptions.AllowCredentials)
+            policy.AllowCredentials();
     });
 });
 
-// Authentication 
+// Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -145,10 +180,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+                Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
             ClockSkew = TimeSpan.Zero
         };
 
@@ -170,19 +205,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Rate Limiting 
-var permitLimit = Env.GetInt("RATE_LIMIT_PERMIT_LIMIT", 100);
-var windowSeconds = Env.GetInt("RATE_LIMIT_WINDOW_SECONDS", 60);
-var queueLimit = Env.GetInt("RATE_LIMIT_QUEUE_LIMIT", 10);
-
+// Rate Limiting
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("fixed", limiterOptions =>
     {
-        limiterOptions.PermitLimit = permitLimit;
-        limiterOptions.Window = TimeSpan.FromSeconds(windowSeconds);
+        limiterOptions.PermitLimit = rateLimitOptions.PermitLimit;
+        limiterOptions.Window = TimeSpan.FromSeconds(rateLimitOptions.WindowSeconds);
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = queueLimit;
+        limiterOptions.QueueLimit = rateLimitOptions.QueueLimit;
+    });
+
+    options.AddFixedWindowLimiter("auth", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = rateLimitOptions.AuthEndpointPermitLimit;
+        limiterOptions.Window = TimeSpan.FromSeconds(rateLimitOptions.WindowSeconds);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
     });
 
     options.OnRejected = async (context, cancellationToken) =>
@@ -212,17 +251,14 @@ builder.Services.AddRateLimiter(options =>
 // Health Checks
 builder.Services.AddHealthChecks();
 
-
 // Build 
 var app = builder.Build();
 
-// Middleware Pipeline 
+// Middleware Pipeline
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 app.UseSerilogRequestLogging(options =>
 {
@@ -231,25 +267,23 @@ app.UseSerilogRequestLogging(options =>
 });
 
 app.UseHttpsRedirection();
-app.UseCors("AllowUnityClient");
+app.UseCors(corsOptions.PolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
 // Hangfire Dashboard (dev only)
 if (app.Environment.IsDevelopment())
 {
-    app.UseHangfireDashboard(builder.Configuration["Hangfire:DashboardPath"],
-        new DashboardOptions
-        {
-            Authorization = []
-        });
+    app.UseHangfireDashboard(hangfireOptions.DashboardPath,
+        new DashboardOptions { Authorization = [] });
 }
+
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// SignalR Hubs 
+// SignalR Hubs (uncomment when hubs are created)
 // app.MapHub<AvatarHub>("/hubs/avatar");
 // app.MapHub<ChatHub>("/hubs/chat");
-// Commented until hubs are created in Phase 5
 
 app.Run();

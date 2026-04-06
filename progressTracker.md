@@ -14,9 +14,10 @@
 - [x] UnitOfWork
 - [x] Redis cache service (ICacheService, ILocationCacheService, ICacheAdminService)
 - [x] CacheKeys
-- [ ] IRealTimeService abstraction + SignalR implementation
-- [ ] Hangfire background jobs
-- [ ] Serilog logging
+- [x] IRealTimeService abstraction + SignalR implementation
+- [x] Hangfire background jobs
+- [x] Serilog logging
+- [x] Options hierarchy (BaseOptions => ConnectionOptions, SecurityOptions, FeatureOptions => all 13 option classes)
 
 ### Phase 3 — Shared Layer
 - [ ] Constants

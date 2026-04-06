@@ -1,0 +1,19 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning",
+        "Microsoft.EntityFrameworkCore.Database.Command": "Information",
+        "Hangfire": "Warning",
+        "System": "Warning"
+      }
+    },
+    "Enrich": ["FromLogContext", "WithMachineName", "WithThreadId"],
+    "Properties": {
+      "Application": "AbujaSocialMetaverse",
+      "Environment": "Development"
+    }
+  }
+}
