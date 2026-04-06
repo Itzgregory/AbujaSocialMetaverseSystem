@@ -3,6 +3,9 @@ using AbujaSocialMetaverse.API.Middleware;
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Infrastructure.Caching;
 using AbujaSocialMetaverse.Infrastructure.RealTime;
+using AbujaSocialMetaverse.Infrastructure.BackgroundJobs;
+using Hangfire;
+using Hangfire.PostgreSql;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -90,6 +93,23 @@ builder.Services.AddScoped<ICacheAdminService, RedisCacheAdminService>();
 // Real-Time Service 
 builder.Services.AddSingleton<IConnectionTracker, RedisConnectionTracker>();
 builder.Services.AddScoped<IRealTimeService, SignalRRealTimeService>();
+
+// Hangfire 
+builder.Services.AddHangfire(config =>
+    config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(options =>
+            options.UseNpgsqlConnection(dbConnection)));
+
+builder.Services.AddHangfireServer(options =>
+{
+    options.WorkerCount = Environment.ProcessorCount * 2;
+    options.Queues = ["critical", "default", "low"];
+});
+
+builder.Services.AddScoped<IBackgroundJobService, HangfireBackgroundJobService>();
 
 // Database 
 builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
@@ -215,6 +235,15 @@ app.UseCors("AllowUnityClient");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+// Hangfire Dashboard (dev only)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard(builder.Configuration["Hangfire:DashboardPath"],
+        new DashboardOptions
+        {
+            Authorization = []
+        });
+}
 app.MapControllers();
 app.MapHealthChecks("/health");
 
