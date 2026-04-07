@@ -11,12 +11,12 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal;
 
 public class UserInterestService : IUserInterestService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserInterestService> _logger;
 
-    public UserInterestService(ApplicationDbContext context, ILogger<UserInterestService> logger)
+    public UserInterestService(IUnitOfWork unitOfWork, ILogger<UserInterestService> logger)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -24,7 +24,7 @@ public class UserInterestService : IUserInterestService
     {
         try
         {
-            var interests = await _context.Set<Interest>()
+            var interests = await _unitOfWork.Set<Interest>()
                 .Where(i => i.IsActive && !i.IsDeleted)
                 .OrderBy(i => i.Name)
                 .Select(i => i.Name)
@@ -46,7 +46,7 @@ public class UserInterestService : IUserInterestService
             Guard.Against.EmptyGuid(userId, nameof(userId));
             Guard.Against.Null(interests, nameof(interests));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()
                 .Include(u => u.Interests)
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
                 
@@ -55,13 +55,11 @@ public class UserInterestService : IUserInterestService
                 return Result.NotFound(ErrorCodes.User.NotFound, $"User with ID '{userId}' was not found.");
             }
             
-            // Clear existing interests
             user.Interests.Clear();
             
-            // Add new interests
             foreach (var name in interests.Distinct())
             {
-                var interest = await _context.Set<Interest>()
+                var interest = await _unitOfWork.Set<Interest>()
                     .FirstOrDefaultAsync(i => i.Name == name && !i.IsDeleted, cancellationToken);
                     
                 if (interest is null)
@@ -73,7 +71,7 @@ public class UserInterestService : IUserInterestService
                         Category = "General",
                         IsActive = true
                     };
-                    await _context.Set<Interest>().AddAsync(interest, cancellationToken);
+                    await _unitOfWork.Set<Interest>().AddAsync(interest, cancellationToken);
                 }
                 
                 user.Interests.Add(new UserInterest
@@ -84,7 +82,7 @@ public class UserInterestService : IUserInterestService
                 });
             }
             
-            await _context.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
             
             _logger.LogInformation("Interests updated for user: {UserId}", userId);
             return Result.Success();

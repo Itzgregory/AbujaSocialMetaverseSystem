@@ -11,12 +11,12 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal;
 
 public class ModeAvailabilityService : IModeAvailabilityService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ModeAvailabilityService> _logger;
 
-    public ModeAvailabilityService(ApplicationDbContext context, ILogger<ModeAvailabilityService> logger)
+    public ModeAvailabilityService(IUnitOfWork unitOfWork, ILogger<ModeAvailabilityService> logger)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -26,7 +26,7 @@ public class ModeAvailabilityService : IModeAvailabilityService
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()
                 .Include(u => u.DatingProfile)
                 .Include(u => u.NetworkingProfile)
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
@@ -59,7 +59,7 @@ public class ModeAvailabilityService : IModeAvailabilityService
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()
                 .Include(u => u.DatingProfile)
                 .Include(u => u.NetworkingProfile)
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);

@@ -54,13 +54,17 @@ public class UserProfileService : IUserProfileService
             if (!string.IsNullOrWhiteSpace(request.DisplayName))
             {
                 user.DisplayName = Guard.Against.ExceedsMaxLength(
-                    request.DisplayName, nameof(request.DisplayName), 100);
+                    request.DisplayName, 
+                    nameof(request.DisplayName), 
+                    _userOptions.MaxDisplayNameLength);
             }
             
             if (!string.IsNullOrWhiteSpace(request.Bio))
             {
                 user.Bio = Guard.Against.ExceedsMaxLength(
-                    request.Bio, nameof(request.Bio), 500);
+                    request.Bio, 
+                    nameof(request.Bio), 
+                    _userOptions.MaxBioLength);
             }
             
             if (request.AvatarUrl is not null)
@@ -119,10 +123,10 @@ public class UserProfileService : IUserProfileService
             // Update mode
             user.CurrentMode = request.CurrentMode;
             
-            // Update settings from request or use defaults
-            UpdateSetting(user, "OpenToNetworking", request.OpenToNetworking.ToString());
-            UpdateSetting(user, "OpenToFriends", request.OpenToFriends.ToString());
-            UpdateSetting(user, "OpenToDating", request.OpenToDating.ToString());
+            // Update settings using keys from config
+            UpdateSetting(user, _userOptions.SettingKeyOpenToNetworking, request.OpenToNetworking.ToString());
+            UpdateSetting(user, _userOptions.SettingKeyOpenToFriends, request.OpenToFriends.ToString());
+            UpdateSetting(user, _userOptions.SettingKeyOpenToDating, request.OpenToDating.ToString());
             
             // Max travel radius - use request value or default from config
             var maxTravelRadius = request.MaxTravelRadiusMeters ?? _userOptions.DefaultTravelRadiusMeters;
@@ -131,7 +135,7 @@ public class UserProfileService : IUserProfileService
                 nameof(request.MaxTravelRadiusMeters),
                 1,
                 _userOptions.MaxTravelRadiusMeters);
-            UpdateSetting(user, "MaxTravelRadiusMeters", maxTravelRadius.ToString());
+            UpdateSetting(user, _userOptions.SettingKeyMaxTravelRadiusMeters, maxTravelRadius.ToString());
             
             // Min age preference - use request value or default from config
             var minAgePreference = request.MinAgePreference ?? _userOptions.MinAgePreference;
@@ -140,7 +144,7 @@ public class UserProfileService : IUserProfileService
                 nameof(request.MinAgePreference),
                 _userOptions.MinAgePreference,
                 _userOptions.MaxAgePreference);
-            UpdateSetting(user, "MinAgePreference", minAgePreference.ToString());
+            UpdateSetting(user, _userOptions.SettingKeyMinAgePreference, minAgePreference.ToString());
             
             // Max age preference - use request value or default from config
             var maxAgePreference = request.MaxAgePreference ?? _userOptions.MaxAgePreference;
@@ -149,7 +153,7 @@ public class UserProfileService : IUserProfileService
                 nameof(request.MaxAgePreference),
                 minAgePreference,
                 _userOptions.MaxAgePreference);
-            UpdateSetting(user, "MaxAgePreference", maxAgePreference.ToString());
+            UpdateSetting(user, _userOptions.SettingKeyMaxAgePreference, maxAgePreference.ToString());
             
             // Update interests
             if (request.Interests is not null)
@@ -208,10 +212,24 @@ public class UserProfileService : IUserProfileService
             
             if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
             {
+                // Increment failed login attempts
+                user.FailedLoginAttempts++;
+                
+                if (user.FailedLoginAttempts >= 5)
+                {
+                    user.LockedUntil = DateTimeOffset.UtcNow.AddMinutes(15);
+                }
+                
+                await _context.SaveChangesAsync(cancellationToken);
+                
                 return Result.ValidationError(
                     ErrorCodes.User.InvalidPassword,
                     "Current password is incorrect.");
             }
+            
+            // Reset failed attempts on success
+            user.FailedLoginAttempts = 0;
+            user.LockedUntil = null;
             
             var passwordIssues = CommonValidators.GetPasswordIssues(request.NewPassword);
             if (passwordIssues.Any())
@@ -302,19 +320,19 @@ public class UserProfileService : IUserProfileService
         var settings = user.Settings.ToDictionary(s => s.Key, s => s.Value);
         
         return new UserSettingsDto(
-            OpenToNetworking: settings.GetValueOrDefault("OpenToNetworking") == "True",
-            OpenToFriends: settings.GetValueOrDefault("OpenToFriends") == "True",
-            OpenToDating: settings.GetValueOrDefault("OpenToDating") == "True",
+            OpenToNetworking: settings.GetValueOrDefault(_userOptions.SettingKeyOpenToNetworking) == "True",
+            OpenToFriends: settings.GetValueOrDefault(_userOptions.SettingKeyOpenToFriends) == "True",
+            OpenToDating: settings.GetValueOrDefault(_userOptions.SettingKeyOpenToDating) == "True",
             MaxTravelRadiusMeters: int.TryParse(
-                settings.GetValueOrDefault("MaxTravelRadiusMeters"), out var radius) 
+                settings.GetValueOrDefault(_userOptions.SettingKeyMaxTravelRadiusMeters), out var radius) 
                 ? radius 
                 : _userOptions.DefaultTravelRadiusMeters,
             MinAgePreference: int.TryParse(
-                settings.GetValueOrDefault("MinAgePreference"), out var minAge) 
+                settings.GetValueOrDefault(_userOptions.SettingKeyMinAgePreference), out var minAge) 
                 ? minAge 
                 : _userOptions.MinAgePreference,
             MaxAgePreference: int.TryParse(
-                settings.GetValueOrDefault("MaxAgePreference"), out var maxAge) 
+                settings.GetValueOrDefault(_userOptions.SettingKeyMaxAgePreference), out var maxAge) 
                 ? maxAge 
                 : _userOptions.MaxAgePreference,
             Interests: user.Interests.Select(ui => ui.Interest!.Name).ToList().AsReadOnly()

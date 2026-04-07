@@ -14,12 +14,12 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal;
 
 public class UserQueryService : IUserQueryService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserQueryService> _logger;
 
-    public UserQueryService(ApplicationDbContext context, ILogger<UserQueryService> logger)
+    public UserQueryService(IUnitOfWork unitOfWork, ILogger<UserQueryService> logger)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -29,7 +29,7 @@ public class UserQueryService : IUserQueryService
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
                 
             if (user is null)
@@ -61,7 +61,7 @@ public class UserQueryService : IUserQueryService
                 return Result<UserDto>.ValidationError(ErrorCodes.User.InvalidEmail, "The provided email address is invalid.");
             }
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()
                 .FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted, cancellationToken);
                 
             if (user is null)
