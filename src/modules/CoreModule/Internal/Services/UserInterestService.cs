@@ -1,13 +1,13 @@
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
-using AbujaSocialMetaverse.Modules.Core.Public;
+using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
 using AbujaSocialMetaverse.Shared.Constants;
 using AbujaSocialMetaverse.Shared.Helpers;
 using AbujaSocialMetaverse.Shared.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AbujaSocialMetaverse.Modules.Core.Internal;
+namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
 public class UserInterestService : IUserInterestService
 {

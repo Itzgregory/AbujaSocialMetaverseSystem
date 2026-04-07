@@ -1,7 +1,7 @@
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
-using AbujaSocialMetaverse.Modules.Core.Helpers;
-using AbujaSocialMetaverse.Modules.Core.Public;
+using AbujaSocialMetaverse.Modules.Core.Internal.Mappers;
+using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
 using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Constants;
 using AbujaSocialMetaverse.Shared.Helpers;
@@ -10,7 +10,7 @@ using AbujaSocialMetaverse.Shared.Validators;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace AbujaSocialMetaverse.Modules.Core.Internal;
+namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
 public class UserQueryService : IUserQueryService
 {

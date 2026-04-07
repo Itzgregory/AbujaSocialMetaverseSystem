@@ -1,7 +1,7 @@
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
-using AbujaSocialMetaverse.Modules.Core.Helpers;
-using AbujaSocialMetaverse.Modules.Core.Public;
+using AbujaSocialMetaverse.Modules.Core.Internal.Mappers;
+using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
 using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Configuration.Options;
 using AbujaSocialMetaverse.Shared.Constants;
@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace AbujaSocialMetaverse.Modules.Core.Internal;
+namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
 public class UserProfileService : IUserProfileService
 {

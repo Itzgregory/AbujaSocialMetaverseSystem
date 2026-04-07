@@ -1,7 +1,7 @@
 using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Models;
 
-namespace AbujaSocialMetaverse.Modules.Core.Helpers;
+namespace AbujaSocialMetaverse.Modules.Core.Internal.Mappers;
 
 public static class UserMapper
 {

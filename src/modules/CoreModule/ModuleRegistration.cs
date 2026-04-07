@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using AbujaSocialMetaverse.Modules.Core.Internal;
-using AbujaSocialMetaverse.Modules.Core.Public;
+using AbujaSocialMetaverse.Modules.Core.Internal.Services;
+using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
 
 namespace AbujaSocialMetaverse.Modules.Core;
 
