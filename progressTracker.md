@@ -20,20 +20,22 @@
 - [x] Options hierarchy (BaseOptions => ConnectionOptions, SecurityOptions, FeatureOptions => all 13 option classes)
 
 ### Phase 3 — Shared Layer
-- [ ] Constants
-- [ ] Exceptions
-- [ ] Validators
-- [ ] Shared contracts (IAdminProjection)
-- [ ] Shared models (CompatibilityContext, AdminMetricSnapshot, DataCategory)
+- [x] Constants (ErrorCodes, AppConstants)
+- [x] Exceptions (DomainException, ConsentRequiredException)
+- [x] Helpers (Guard)
+- [x] Models (Result, PagedResult, CompatibilityContext, AdminMetricSnapshot, DataCategory, SocialMode)
+- [x] Contracts (IAdminProjection)
+- [x] Validators (CommonValidators)
+- [x] GlobalExceptionMiddleware 
 
 ### Phase 4 — Modules
-- [ ] Core Module
-- [ ] Privacy Module
-- [ ] Map Module
-- [ ] Business Module
-- [ ] Social Module
-- [ ] Payment Module
-- [ ] Admin Module
+- [ ] Core Module — User, Auth, Session 
+- [ ] Privacy Module — Consent, Retention, DataSubject, AuditLog
+- [ ] Map Module — Tiles, Geocoding, Location
+- [ ] Business Module — Listings, Categories, Recommendation Engine
+- [ ] Social Module — Avatar, Proximity, Compatibility, Chat
+- [ ] Payment Module — Subscriptions, Transactions, Invoices
+- [ ] Admin Module — Dashboard, Moderation, Projections
 
 ### Phase 5 — API Layer
 - [ ] Middleware (RateLimiting, Logging) — partially done

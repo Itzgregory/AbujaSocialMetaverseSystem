@@ -19,6 +19,7 @@ public static class ErrorCodes
         public const string InsufficientPermissions = "AUTH_INSUFFICIENT_PERMISSIONS";
         public const string AccountLocked = "AUTH_ACCOUNT_LOCKED";
         public const string AccountNotVerified = "AUTH_ACCOUNT_NOT_VERIFIED";
+        public const string EmailNotVerified = "AUTH_EMAIL_NOT_VERIFIED";
     }
 
     public static class User

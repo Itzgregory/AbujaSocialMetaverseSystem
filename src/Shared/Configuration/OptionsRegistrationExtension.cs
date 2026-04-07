@@ -29,7 +29,8 @@ public static class OptionsRegistrationExtension
             new RecommendationOptions(),
             new RateLimitOptions(),
             new CorsOptions(),
-            new LoggingOptions()
+            new LoggingOptions(),
+            new UserOptions(),
         };
 
         foreach (var option in allOptions)
