@@ -17,16 +17,16 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal;
 
 public class UserProfileService : IUserProfileService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly UserOptions _userOptions;
     private readonly ILogger<UserProfileService> _logger;
 
     public UserProfileService(
-        ApplicationDbContext context,
+        IUnitOfWork unitOfWork,
         IOptions<UserOptions> userOptions,
         ILogger<UserProfileService> logger)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;  // ✅ Fixed: assign to _unitOfWork, not _context
         _userOptions = userOptions.Value;
         _logger = logger;
     }
@@ -41,7 +41,7 @@ public class UserProfileService : IUserProfileService
             Guard.Against.EmptyGuid(userId, nameof(userId));
             Guard.Against.Null(request, nameof(request));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()  
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
                 
             if (user is null)
@@ -74,7 +74,7 @@ public class UserProfileService : IUserProfileService
                     : request.AvatarUrl;
             }
             
-            await _context.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);  
             
             _logger.LogInformation("User profile updated: {UserId}", userId);
             
@@ -107,7 +107,7 @@ public class UserProfileService : IUserProfileService
             Guard.Against.EmptyGuid(userId, nameof(userId));
             Guard.Against.Null(request, nameof(request));
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()  
                 .Include(u => u.Settings)
                 .Include(u => u.Interests)
                     .ThenInclude(ui => ui.Interest)
@@ -161,7 +161,7 @@ public class UserProfileService : IUserProfileService
                 await UpdateInterestsAsync(user, request.Interests, cancellationToken);
             }
             
-            await _context.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);  
             
             _logger.LogInformation("User settings updated: {UserId}", userId);
             
@@ -200,7 +200,7 @@ public class UserProfileService : IUserProfileService
                     $"Password must be between {_userOptions.MinPasswordLength} and {_userOptions.MaxPasswordLength} characters.");
             }
             
-            var user = await _context.Set<User>()
+            var user = await _unitOfWork.Set<User>()  
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
                 
             if (user is null)
@@ -220,7 +220,7 @@ public class UserProfileService : IUserProfileService
                     user.LockedUntil = DateTimeOffset.UtcNow.AddMinutes(15);
                 }
                 
-                await _context.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);  
                 
                 return Result.ValidationError(
                     ErrorCodes.User.InvalidPassword,
@@ -243,7 +243,7 @@ public class UserProfileService : IUserProfileService
                 request.NewPassword,
                 AppConstants.Security.BcryptWorkFactor);
                 
-            await _context.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);  
             
             _logger.LogInformation("Password changed for user: {UserId}", userId);
             return Result.Success();
@@ -291,7 +291,7 @@ public class UserProfileService : IUserProfileService
         
         foreach (var name in interestNames.Distinct())
         {
-            var interest = await _context.Set<Interest>()
+            var interest = await _unitOfWork.Set<Interest>()  
                 .FirstOrDefaultAsync(i => i.Name == name && !i.IsDeleted, cancellationToken);
                 
             if (interest is null)
@@ -303,7 +303,7 @@ public class UserProfileService : IUserProfileService
                     Category = "General",
                     IsActive = true
                 };
-                await _context.Set<Interest>().AddAsync(interest, cancellationToken);
+                await _unitOfWork.Set<Interest>().AddAsync(interest, cancellationToken);  
             }
             
             user.Interests.Add(new UserInterest
