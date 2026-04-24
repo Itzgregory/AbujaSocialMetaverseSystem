@@ -13,6 +13,7 @@ public static class ModuleRegistration
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IUserInterestService, UserInterestService>();
         services.AddScoped<IModeAvailabilityService, ModeAvailabilityService>();
+        services.AddScoped<ITokenService, TokenService>();
         
         // AuthService will be added when implemented
         // services.AddScoped<IAuthService, AuthService>();
