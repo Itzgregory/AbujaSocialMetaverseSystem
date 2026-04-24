@@ -27,6 +27,7 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 /// 4. HANDLE SPECIFIC ERRORS OUTSIDE ExecuteAsync:
 ///    - Catch DbUpdateException in the calling method for duplicate keys, etc.
 ///    - Example: try { return await ExecuteAsync(...); } catch (DbUpdateException ex) { ... }
+///    - Set catchAll: false to let specific exceptions bubble up
 /// 
 /// 5. DO NOT USE ExecuteAsync FOR:
 ///    - Simple validation (no I/O, low risk)
@@ -53,13 +54,16 @@ public abstract class BaseService
 
     /// <summary>
     /// Executes an async operation that returns a Result<T> with standardized error handling.
-    /// NOTE: DbUpdateException is NOT caught here intentionally. Services should handle
-    /// specific database errors (like duplicate keys) in their own try-catch blocks.
     /// </summary>
+    /// <param name="operationName">Name of the operation for logging</param>
+    /// <param name="action">Async function to execute</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="catchAll">If true, catches all exceptions. If false, only catches ArgumentException and InvalidOperationException. Default: true.</param>
     protected async Task<Result<T>> ExecuteAsync<T>(
         string operationName,
         Func<CancellationToken, Task<Result<T>>> action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool catchAll = true)
     {
         try
         {
@@ -75,22 +79,26 @@ public abstract class BaseService
             _logger.LogWarning(ex, InvalidStateErrorMsg, operationName);
             return Result<T>.ValidationError(ErrorCodes.Validation.InvalidState, ex.Message);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (catchAll)
         {
             _logger.LogError(ex, UnexpectedErrorMsg, operationName);
             return Result<T>.Failure(ErrorCodes.Validation.InternalError, GenericErrorMessage);
         }
+        // If catchAll is false, other exceptions bubble up (for Polly, transactions, etc.)
     }
 
     /// <summary>
     /// Executes an async operation that returns a Result (void) with standardized error handling.
-    /// NOTE: DbUpdateException is NOT caught here intentionally. Services should handle
-    /// specific database errors (like duplicate keys) in their own try-catch blocks.
     /// </summary>
+    /// <param name="operationName">Name of the operation for logging</param>
+    /// <param name="action">Async function to execute</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="catchAll">If true, catches all exceptions. If false, only catches ArgumentException and InvalidOperationException. Default: true.</param>
     protected async Task<Result> ExecuteAsync(
         string operationName,
         Func<CancellationToken, Task<Result>> action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool catchAll = true)
     {
         try
         {
@@ -106,20 +114,25 @@ public abstract class BaseService
             _logger.LogWarning(ex, InvalidStateErrorMsg, operationName);
             return Result.ValidationError(ErrorCodes.Validation.InvalidState, ex.Message);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (catchAll)
         {
             _logger.LogError(ex, UnexpectedErrorMsg, operationName);
             return Result.Failure(ErrorCodes.Validation.InternalError, GenericErrorMessage);
         }
+        // If catchAll is false, other exceptions bubble up (for Polly, transactions, etc.)
     }
 
     /// <summary>
     /// Executes a sync operation that returns a Result<T> with standardized error handling.
     /// Use this for CPU-bound operations like password hashing.
     /// </summary>
+    /// <param name="operationName">Name of the operation for logging</param>
+    /// <param name="action">Sync function to execute</param>
+    /// <param name="catchAll">If true, catches all exceptions. If false, only catches ArgumentException and InvalidOperationException. Default: true.</param>
     protected Result<T> ExecuteSync<T>(
         string operationName,
-        Func<Result<T>> action)
+        Func<Result<T>> action,
+        bool catchAll = true)
     {
         try
         {
@@ -135,20 +148,25 @@ public abstract class BaseService
             _logger.LogWarning(ex, InvalidStateErrorMsg, operationName);
             return Result<T>.ValidationError(ErrorCodes.Validation.InvalidState, ex.Message);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (catchAll)
         {
             _logger.LogError(ex, UnexpectedErrorMsg, operationName);
             return Result<T>.Failure(ErrorCodes.Validation.InternalError, GenericErrorMessage);
         }
+        // If catchAll is false, other exceptions bubble up (for Polly, transactions, etc.)
     }
 
     /// <summary>
     /// Executes a sync operation that returns a Result (void) with standardized error handling.
     /// Use this for CPU-bound operations.
     /// </summary>
+    /// <param name="operationName">Name of the operation for logging</param>
+    /// <param name="action">Sync function to execute</param>
+    /// <param name="catchAll">If true, catches all exceptions. If false, only catches ArgumentException and InvalidOperationException. Default: true.</param>
     protected Result ExecuteSync(
         string operationName,
-        Func<Result> action)
+        Func<Result> action,
+        bool catchAll = true)
     {
         try
         {
@@ -164,11 +182,12 @@ public abstract class BaseService
             _logger.LogWarning(ex, InvalidStateErrorMsg, operationName);
             return Result.ValidationError(ErrorCodes.Validation.InvalidState, ex.Message);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (catchAll)
         {
             _logger.LogError(ex, UnexpectedErrorMsg, operationName);
             return Result.Failure(ErrorCodes.Validation.InternalError, GenericErrorMessage);
         }
+        // If catchAll is false, other exceptions bubble up (for Polly, transactions, etc.)
     }
 
     /// <summary>
