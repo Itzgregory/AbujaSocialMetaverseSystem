@@ -31,6 +31,8 @@ public static class OptionsRegistrationExtension
             new CorsOptions(),
             new LoggingOptions(),
             new UserOptions(),
+            new LockoutOptions(),
+            new PasswordPolicyOptions(),
         };
 
         foreach (var option in allOptions)

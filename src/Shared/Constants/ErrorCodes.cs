@@ -106,6 +106,9 @@ public static class ErrorCodes
         public const string OutOfRange = "VALIDATION_OUT_OF_RANGE";
         public const string InvalidGuid = "VALIDATION_INVALID_GUID";
         public const string InvalidPagination = "VALIDATION_INVALID_PAGINATION";
+        public const string InvalidState = "VALIDATION_INVALID_STATE";
+        public const string DatabaseError = "VALIDATION_DATABASE_ERROR";
+        public const string InternalError = "VALIDATION_INTERNAL_ERROR";
     }
 
     public static class Cache

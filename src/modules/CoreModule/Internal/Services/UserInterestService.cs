@@ -9,59 +9,55 @@ using Microsoft.Extensions.Logging;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
-public class UserInterestService : IUserInterestService
+public class UserInterestService : BaseService, IUserInterestService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<UserInterestService> _logger;
-
-    public UserInterestService(IUnitOfWork unitOfWork, ILogger<UserInterestService> logger)
-    {
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
+    public UserInterestService(
+        IUnitOfWork unitOfWork,
+        ILogger<UserInterestService> logger)
+        : base(logger, unitOfWork) { }
 
     public async Task<Result<IReadOnlyList<string>>> GetInterestsAsync(CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(GetInterestsAsync), async (ct) =>
         {
-            var interests = await _unitOfWork.Set<Interest>()
+            var interests = await _unitOfWork!.Set<Interest>()
                 .Where(i => i.IsActive && !i.IsDeleted)
                 .OrderBy(i => i.Name)
                 .Select(i => i.Name)
-                .ToListAsync(cancellationToken);
-                
+                .ToListAsync(ct);
+
             return Result<IReadOnlyList<string>>.Success(interests.AsReadOnly());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get interests");
-            return Result<IReadOnlyList<string>>.Failure(ErrorCodes.Validation.InvalidInput, "An error occurred while retrieving interests.");
-        }
+        }, cancellationToken);
     }
 
-    public async Task<Result> UpdateInterestsAsync(Guid userId, IReadOnlyList<string> interests, CancellationToken cancellationToken = default)
+    public async Task<Result> UpdateInterestsAsync(
+        Guid userId,
+        IReadOnlyList<string> interests,
+        CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(UpdateInterestsAsync), async (ct) =>
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             Guard.Against.Null(interests, nameof(interests));
-            
-            var user = await _unitOfWork.Set<User>()
+
+            var user = await _unitOfWork!.Set<User>()
                 .Include(u => u.Interests)
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
-                
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+
             if (user is null)
             {
-                return Result.NotFound(ErrorCodes.User.NotFound, $"User with ID '{userId}' was not found.");
+                return Result.NotFound(
+                    ErrorCodes.User.NotFound,
+                    $"User with ID '{userId}' was not found.");
             }
-            
+
             user.Interests.Clear();
-            
+
             foreach (var name in interests.Distinct())
             {
                 var interest = await _unitOfWork.Set<Interest>()
-                    .FirstOrDefaultAsync(i => i.Name == name && !i.IsDeleted, cancellationToken);
-                    
+                    .FirstOrDefaultAsync(i => i.Name == name && !i.IsDeleted, ct);
+
                 if (interest is null)
                 {
                     interest = new Interest
@@ -71,9 +67,9 @@ public class UserInterestService : IUserInterestService
                         Category = "General",
                         IsActive = true
                     };
-                    await _unitOfWork.Set<Interest>().AddAsync(interest, cancellationToken);
+                    await _unitOfWork.Set<Interest>().AddAsync(interest, ct);
                 }
-                
+
                 user.Interests.Add(new UserInterest
                 {
                     Id = Guid.NewGuid(),
@@ -81,20 +77,8 @@ public class UserInterestService : IUserInterestService
                     InterestId = interest.Id
                 });
             }
-            
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
-            _logger.LogInformation("Interests updated for user: {UserId}", userId);
-            return Result.Success();
-        }
-        catch (ArgumentException ex)
-        {
-            return Result.ValidationError(ErrorCodes.Validation.InvalidInput, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update interests for user: {UserId}", userId);
-            return Result.Failure(ErrorCodes.User.ProfileIncomplete, "An error occurred while updating interests.");
-        }
+
+            return await SaveChangesAsync(ct);
+        }, cancellationToken);
     }
 }

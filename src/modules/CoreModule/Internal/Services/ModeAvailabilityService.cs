@@ -1,7 +1,6 @@
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
 using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
-using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Constants;
 using AbujaSocialMetaverse.Shared.Helpers;
 using AbujaSocialMetaverse.Shared.Models;
@@ -10,34 +9,37 @@ using Microsoft.Extensions.Logging;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
-public class ModeAvailabilityService : IModeAvailabilityService
+public class ModeAvailabilityService : BaseService, IModeAvailabilityService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<ModeAvailabilityService> _logger;
-
-    public ModeAvailabilityService(IUnitOfWork unitOfWork, ILogger<ModeAvailabilityService> logger)
+    public ModeAvailabilityService(
+        IUnitOfWork unitOfWork,
+        ILogger<ModeAvailabilityService> logger)
+        : base(logger, unitOfWork)
     {
-        _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
-    public async Task<Result<bool>> IsModeAvailableAsync(Guid userId, SocialMode mode, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> IsModeAvailableAsync(
+        Guid userId,
+        SocialMode mode,
+        CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(IsModeAvailableAsync), async (ct) =>
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             
-            var user = await _unitOfWork.Set<User>()
+            var user = await _unitOfWork!.Set<User>()
                 .Include(u => u.DatingProfile)
                 .Include(u => u.NetworkingProfile)
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
                 
             if (user is null)
             {
-                return Result<bool>.NotFound(ErrorCodes.User.NotFound, $"User with ID '{userId}' was not found.");
+                return Result<bool>.NotFound(
+                    ErrorCodes.User.NotFound,
+                    $"User with ID '{userId}' was not found.");
             }
             
-            var isAvailable = mode switch
+            bool isAvailable = mode switch
             {
                 SocialMode.Dating => user.DatingProfile != null,
                 SocialMode.Networking => user.NetworkingProfile != null,
@@ -46,28 +48,28 @@ public class ModeAvailabilityService : IModeAvailabilityService
             };
             
             return Result<bool>.Success(isAvailable);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to check mode availability for user {UserId}, mode {Mode}", userId, mode);
-            return Result<bool>.Failure(ErrorCodes.User.ProfileIncomplete, "An error occurred while checking mode availability.");
-        }
+        }, cancellationToken);
     }
 
-    public async Task<Result<IReadOnlyList<string>>> GetMissingFieldsForModeAsync(Guid userId, SocialMode mode, CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyList<string>>> GetMissingFieldsForModeAsync(
+        Guid userId,
+        SocialMode mode,
+        CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(GetMissingFieldsForModeAsync), async (ct) =>
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
             
-            var user = await _unitOfWork.Set<User>()
+            var user = await _unitOfWork!.Set<User>()
                 .Include(u => u.DatingProfile)
                 .Include(u => u.NetworkingProfile)
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
                 
             if (user is null)
             {
-                return Result<IReadOnlyList<string>>.NotFound(ErrorCodes.User.NotFound, $"User with ID '{userId}' was not found.");
+                return Result<IReadOnlyList<string>>.NotFound(
+                    ErrorCodes.User.NotFound,
+                    $"User with ID '{userId}' was not found.");
             }
             
             var missingFields = new List<string>();
@@ -82,11 +84,6 @@ public class ModeAvailabilityService : IModeAvailabilityService
             }
             
             return Result<IReadOnlyList<string>>.Success(missingFields.AsReadOnly());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get missing fields for user {UserId}, mode {Mode}", userId, mode);
-            return Result<IReadOnlyList<string>>.Failure(ErrorCodes.User.ProfileIncomplete, "An error occurred while retrieving missing fields.");
-        }
+        }, cancellationToken);
     }
 }

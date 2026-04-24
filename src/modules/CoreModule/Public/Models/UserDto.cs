@@ -9,5 +9,6 @@ public record UserDto(
     string? Bio,
     SocialMode CurrentMode,
     DateTimeOffset CreatedAt,
-    bool IsActive
+    bool IsActive,
+    bool EmailVerified = false
 );

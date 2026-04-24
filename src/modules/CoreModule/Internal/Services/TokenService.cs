@@ -6,6 +6,7 @@ using AbujaSocialMetaverse.Infrastructure.Caching;
 using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
 using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
+using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Configuration.Options;
 using AbujaSocialMetaverse.Shared.Constants;
 using AbujaSocialMetaverse.Shared.Helpers;
@@ -17,23 +18,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
-public class TokenService : ITokenService
+public class TokenService : BaseService, ITokenService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly JwtOptions _jwtOptions;
     private readonly ICacheService _cache;
-    private readonly ILogger<TokenService> _logger;
+    private readonly JwtOptions _jwtOptions;
 
     public TokenService(
         IUnitOfWork unitOfWork,
-        IOptions<JwtOptions> jwtOptions,
         ICacheService cache,
+        IOptions<JwtOptions> jwtOptions,
         ILogger<TokenService> logger)
+        : base(logger, unitOfWork)
     {
-        _unitOfWork = unitOfWork;
-        _jwtOptions = jwtOptions.Value;
         _cache = cache;
-        _logger = logger;
+        _jwtOptions = jwtOptions.Value;
     }
 
     public async Task<TokenResult> GenerateTokensAsync(
@@ -59,7 +57,7 @@ public class TokenService : ITokenService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        await _unitOfWork.Set<Session>().AddAsync(session, cancellationToken);
+        await _unitOfWork!.Set<Session>().AddAsync(session, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Tokens generated for user {UserId}", userId);

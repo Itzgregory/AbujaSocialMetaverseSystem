@@ -29,7 +29,7 @@
 - [x] GlobalExceptionMiddleware 
 
 ### Phase 4 — Modules
-- [ ] Core Module — User, Auth, Session 
+- [x] Core Module — User, Auth, Session 
 - [ ] Privacy Module — Consent, Retention, DataSubject, AuditLog
 - [ ] Map Module — Tiles, Geocoding, Location
 - [ ] Business Module — Listings, Categories, Recommendation Engine

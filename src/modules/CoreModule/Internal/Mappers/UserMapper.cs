@@ -1,3 +1,4 @@
+using AbujaSocialMetaverse.Modules.Core.Data.Entities;
 using AbujaSocialMetaverse.Modules.Core.Public.Models;
 using AbujaSocialMetaverse.Shared.Models;
 
@@ -5,17 +6,19 @@ namespace AbujaSocialMetaverse.Modules.Core.Internal.Mappers;
 
 public static class UserMapper
 {
-    public static UserDto ToDto(
-        Guid id,
-        string email,
-        string displayName,
-        string? avatarUrl,
-        string? bio,
-        SocialMode currentMode,
-        DateTimeOffset createdAt,
-        bool isActive)
+    public static UserDto ToDto(User user)
     {
-        return new UserDto(id, email, displayName, avatarUrl, bio, currentMode, createdAt, isActive);
+        return new UserDto(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            user.AvatarUrl,
+            user.Bio,
+            user.CurrentMode,
+            user.CreatedAt,
+            user.IsActive,
+            user.EmailVerified
+        );
     }
 
     public static UserSettingsDto ToSettingsDto(

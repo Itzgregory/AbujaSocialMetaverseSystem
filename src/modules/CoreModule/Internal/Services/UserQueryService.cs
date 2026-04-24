@@ -12,73 +12,59 @@ using Microsoft.Extensions.Logging;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
-public class UserQueryService : IUserQueryService
+public class UserQueryService : BaseService, IUserQueryService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<UserQueryService> _logger;
-
-    public UserQueryService(IUnitOfWork unitOfWork, ILogger<UserQueryService> logger)
+    public UserQueryService(
+        IUnitOfWork unitOfWork,
+        ILogger<UserQueryService> logger)
+        : base(logger, unitOfWork)
     {
-        _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
     public async Task<Result<UserDto>> GetByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(GetByIdAsync), async (ct) =>
         {
             Guard.Against.EmptyGuid(userId, nameof(userId));
-            
-            var user = await _unitOfWork.Set<User>()
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
-                
+
+            var user = await _unitOfWork!.Set<User>()
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, ct);
+
             if (user is null)
             {
-                return Result<UserDto>.NotFound(ErrorCodes.User.NotFound, $"User with ID '{userId}' was not found.");
+                return Result<UserDto>.NotFound(
+                    ErrorCodes.User.NotFound,
+                    $"User with ID '{userId}' was not found.");
             }
-            
-            var dto = UserMapper.ToDto(
-                user.Id, user.Email, user.DisplayName, user.AvatarUrl, user.Bio,
-                user.CurrentMode, user.CreatedAt, user.IsActive);
-                
-            return Result<UserDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get user by ID: {UserId}", userId);
-            return Result<UserDto>.Failure(ErrorCodes.User.NotFound, "An error occurred while retrieving the user.");
-        }
+
+            return Result<UserDto>.Success(UserMapper.ToDto(user));
+        }, cancellationToken);
     }
 
     public async Task<Result<UserDto>> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        try
+        return await ExecuteAsync(nameof(GetByEmailAsync), async (ct) =>
         {
             Guard.Against.NullOrWhiteSpace(email, nameof(email));
-            
+
             if (!CommonValidators.IsValidEmail(email))
             {
-                return Result<UserDto>.ValidationError(ErrorCodes.User.InvalidEmail, "The provided email address is invalid.");
+                return Result<UserDto>.ValidationError(
+                    ErrorCodes.User.InvalidEmail,
+                    "The provided email address is invalid.");
             }
-            
-            var user = await _unitOfWork.Set<User>()
-                .FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted, cancellationToken);
-                
+
+            var user = await _unitOfWork!.Set<User>()
+                .FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted, ct);
+
             if (user is null)
             {
-                return Result<UserDto>.NotFound(ErrorCodes.User.NotFound, $"User with email '{email}' was not found.");
+                return Result<UserDto>.NotFound(
+                    ErrorCodes.User.NotFound,
+                    $"User with email '{email}' was not found.");
             }
-            
-            var dto = UserMapper.ToDto(
-                user.Id, user.Email, user.DisplayName, user.AvatarUrl, user.Bio,
-                user.CurrentMode, user.CreatedAt, user.IsActive);
-                
-            return Result<UserDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get user by email: {Email}", email);
-            return Result<UserDto>.Failure(ErrorCodes.User.NotFound, "An error occurred while retrieving the user.");
-        }
+
+            return Result<UserDto>.Success(UserMapper.ToDto(user));
+        }, cancellationToken);
     }
 }
