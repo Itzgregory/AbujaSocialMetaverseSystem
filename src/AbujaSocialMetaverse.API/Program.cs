@@ -50,6 +50,14 @@ var envMappings = new Dictionary<string, string?>
     ["RateLimit:PermitLimit"] = Env.GetString("RATE_LIMIT_PERMIT_LIMIT"),
     ["RateLimit:WindowSeconds"] = Env.GetString("RATE_LIMIT_WINDOW_SECONDS"),
     ["RateLimit:QueueLimit"] = Env.GetString("RATE_LIMIT_QUEUE_LIMIT"),
+    ["Email:Provider"] = Env.GetString("EMAIL_PROVIDER"),
+    ["Email:Host"] = Env.GetString("EMAIL_HOST"),
+    ["Email:Port"] = Env.GetString("EMAIL_PORT"),
+    ["Email:Username"] = Env.GetString("EMAIL_USERNAME"),
+    ["Email:Password"] = Env.GetString("EMAIL_PASSWORD"),
+    ["Email:FromEmail"] = Env.GetString("EMAIL_FROM"),
+    ["Email:FromName"] = Env.GetString("EMAIL_FROM_NAME"),
+    ["Email:BaseUrl"] = Env.GetString("EMAIL_BASE_URL"),
 };
 
 var builder = WebApplication.CreateBuilder(args);

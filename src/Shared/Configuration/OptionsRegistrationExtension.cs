@@ -33,6 +33,7 @@ public static class OptionsRegistrationExtension
             new UserOptions(),
             new LockoutOptions(),
             new PasswordPolicyOptions(),
+            new EmailOptions()
         };
 
         foreach (var option in allOptions)

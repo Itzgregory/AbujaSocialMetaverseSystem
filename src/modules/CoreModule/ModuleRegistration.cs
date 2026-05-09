@@ -26,6 +26,11 @@ public static class ModuleRegistration
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<IAuthService, AuthService>();
         
+        // Email Providers
+        services.AddScoped<IEmailProvider, SmtpEmailProvider>();
+
+        // Email Service
+        services.AddScoped<IEmailService, EmailService>();
         return services;
     }
 }
