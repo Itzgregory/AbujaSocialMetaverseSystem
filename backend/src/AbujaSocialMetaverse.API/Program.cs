@@ -60,20 +60,33 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddInMemoryCollection(
     envMappings.Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value)));
 
-// Register and validate all options
+// Register and validate all options (single source of truth for startup validation)
 builder.Services.AddApplicationOptions(builder.Configuration);
 
-// SUPPRESS THE WARNING ONLY FOR THIS SPECIFIC BLOCK
-#pragma warning disable ASP0000
-var sp = builder.Services.BuildServiceProvider();
-var dbOptions = sp.GetRequiredService<DatabaseOptions>();
-var redisOptions = sp.GetRequiredService<RedisOptions>();
-var jwtOptions = sp.GetRequiredService<JwtOptions>();
-var corsOptions = sp.GetRequiredService<CorsOptions>();
-var rateLimitOptions = sp.GetRequiredService<RateLimitOptions>();
-var hangfireOptions = sp.GetRequiredService<HangfireOptions>();
-var loggingOptions = sp.GetRequiredService<LoggingOptions>();
-#pragma warning restore ASP0000
+// Bind copies for Serilog + infrastructure registration (matches validated singletons from above)
+void BindConfiguredOption<T>(T option) where T : BaseOptions =>
+    builder.Configuration.GetSection(option.SectionName).Bind(option);
+
+var loggingOptions = new LoggingOptions();
+BindConfiguredOption(loggingOptions);
+
+var dbOptions = new DatabaseOptions();
+BindConfiguredOption(dbOptions);
+
+var redisOptions = new RedisOptions();
+BindConfiguredOption(redisOptions);
+
+var jwtOptions = new JwtOptions();
+BindConfiguredOption(jwtOptions);
+
+var corsOptions = new CorsOptions();
+BindConfiguredOption(corsOptions);
+
+var rateLimitOptions = new RateLimitOptions();
+BindConfiguredOption(rateLimitOptions);
+
+var hangfireOptions = new HangfireOptions();
+BindConfiguredOption(hangfireOptions);
 
 // ─── Service Registration ─────────────────────────────────────────
 builder.AddSerilogLogging(loggingOptions);

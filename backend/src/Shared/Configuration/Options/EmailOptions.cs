@@ -23,6 +23,9 @@ public class EmailOptions : ConnectionOptions
     
     public override void Validate()
     {
+        if (string.Equals(Provider, "Mock", StringComparison.OrdinalIgnoreCase))
+            return;
+
         if (Provider == "Smtp")
         {
             if (string.IsNullOrWhiteSpace(Host))

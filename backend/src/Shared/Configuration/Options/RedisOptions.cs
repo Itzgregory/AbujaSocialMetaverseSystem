@@ -9,10 +9,22 @@ public class RedisOptions : ConnectionOptions
     public string? Password { get; set; }
     public int DatabaseIndex { get; set; } = 0;
 
-    public override string ConnectionString =>
-        string.IsNullOrWhiteSpace(Password)
-            ? $"{Host}:{Port},defaultDatabase={DatabaseIndex}"
-            : $"{Host}:{Port},password={Password},defaultDatabase={DatabaseIndex}";
+    /// <summary>
+    /// When false (default), adds <c>abortConnect=false</c> so the process can start if Redis is down.
+    /// Set true to fail fast when Redis must be available before serving traffic.
+    /// </summary>
+    public bool AbortOnConnectFail { get; set; }
+
+    public override string ConnectionString
+    {
+        get
+        {
+            var core = string.IsNullOrWhiteSpace(Password)
+                ? $"{Host}:{Port},defaultDatabase={DatabaseIndex}"
+                : $"{Host}:{Port},password={Password},defaultDatabase={DatabaseIndex}";
+            return AbortOnConnectFail ? core : $"{core},abortConnect=false";
+        }
+    }
 
     /// <summary>
     /// Channel prefix for SignalR backplane.
