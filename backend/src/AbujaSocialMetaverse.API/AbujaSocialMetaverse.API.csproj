@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\AbujaSocialMetaverse.Shared.csproj" />
+    <ProjectReference Include="..\Infrastructure\AbujaSocialMetaverse.Infrastructure.csproj" />
+    <ProjectReference Include="..\modules\CoreModule\AbujaSocialMetaverse.Modules.Core.csproj" />
+    <ProjectReference Include="..\modules\BusinessModule\AbujaSocialMetaverse.Modules.Business.csproj" />
+    <ProjectReference Include="..\modules\SocialModule\AbujaSocialMetaverse.Modules.Social.csproj" />
+    <ProjectReference Include="..\modules\MapModule\AbujaSocialMetaverse.Modules.Map.csproj" />
+    <ProjectReference Include="..\modules\PaymentModule\AbujaSocialMetaverse.Modules.Payment.csproj" />
+    <ProjectReference Include="..\modules\AdminModule\AbujaSocialMetaverse.Modules.Admin.csproj" />
+    <ProjectReference Include="..\modules\PrivacyModule\AbujaSocialMetaverse.Modules.Privacy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.17" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

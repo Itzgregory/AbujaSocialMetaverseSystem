@@ -25,6 +25,8 @@ secrets.json
 # OS files
 .DS_Store
 Thumbs.db
-data/
 logs/
 .env
+
+.sixth/
+.sixth/**
