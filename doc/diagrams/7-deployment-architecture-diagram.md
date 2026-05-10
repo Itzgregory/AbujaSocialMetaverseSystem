@@ -1,0 +1,114 @@
+```
+Title: 7 Deployment Architecture Diagram
+Doc ID / filename: 7-deployment-architecture-diagram.md
+Status: Active
+Author(s): Antigravity
+Owner: Gregory Opara
+Engineering Owner: Gregory Opara
+QA Owner: Gregory Opara
+Ops Owner: Gregory Opara
+Created: 2026-05-10
+Last updated: 2026-05-10
+Related Epic / Ticket(s): N/A
+Short summary: ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+Contact: oparagregory
+```
+
+**TL;DR:** ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                     │
+│                              DEPLOYMENT ARCHITECTURE                                                │
+│                                                                                                     │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │                                    CDN EDGE NETWORK (CloudFront)                            │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                        │   │
+│  │  │ Edge Node   │  │ Edge Node   │  │ Edge Node   │  │ Edge Node   │                        │   │
+│  │  │ (Africa)    │  │ (Europe)    │  │ (Asia)      │  │ (Americas)  │                        │   │
+│  │  │             │  │             │  │             │  │             │                        │   │
+│  │  │ • 3D Assets │  │ • 3D Assets │  │ • 3D Assets │  │ • 3D Assets │                        │   │
+│  │  │ • Textures  │  │ • Textures  │  │ • Textures  │  │ • Textures  │                        │   │
+│  │  │ • Audio     │  │ • Audio     │  │ • Audio     │  │ • Audio     │                        │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘                        │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                              │                                                     │
+│                                              │ Serve Static Assets                                 │
+│                                              ▼                                                     │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │                                    END USER DEVICES                                         │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐        │   │
+│  │  │   iOS Device    │  │ Android Device  │  │   Windows PC    │  │     Mac         │        │   │
+│  │  │  Unity Runtime  │  │  Unity Runtime  │  │  Unity Runtime  │  │  Unity Runtime  │        │   │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘        │   │
+│  └─────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                              │                                                                     │
+│              ┌───────────────┴───────────────┐                                                     │
+│              │ HTTPS (REST)                  │ WSS (SignalR WebSocket)                             │
+│              ▼                               ▼                                                     │
+│  ┌────────────────────────────────────────────────────────────────────────────────────────────┐    │
+│  │                        AWS Region: af-south-1 (Primary - Cape Town)                        │    │
+│  │                                                                                            │    │
+│  │  ┌──────────────────────────────────────────────────────────────────────────────────────┐  │    │
+│  │  │                         Load Balancer (ALB)                                          │  │    │
+│  │  │              HTTPS/WSS Termination — Sticky Sessions for SignalR                     │  │    │
+│  │  └───────────────────────────────┬──────────────────────────────────────────────────────┘  │    │
+│  │                                  │                                                          │    │
+│  │  ┌───────────────────────────────┴──────────────────────────────────────────────────────┐  │    │
+│  │  │                          Auto-Scaling Group                                          │  │    │
+│  │  │                                                                                      │  │    │
+│  │  │  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐        │  │    │
+│  │  │  │  Monolith Instance 1 │  │  Monolith Instance 2 │  │  Monolith Instance 3 │        │  │    │
+│  │  │  │                      │  │                      │  │                      │        │  │    │
+│  │  │  │  • ASP.NET Core API  │  │  • ASP.NET Core API  │  │  • ASP.NET Core API  │        │  │    │
+│  │  │  │  • SignalR AvatarHub │  │  • SignalR AvatarHub │  │  • SignalR AvatarHub │        │  │    │
+│  │  │  │  • SignalR ChatHub   │  │  • SignalR ChatHub   │  │  • SignalR ChatHub   │        │  │    │
+│  │  │  │  • All Modules       │  │  • All Modules       │  │  • All Modules       │        │  │    │
+│  │  │  └──────────────────────┘  └──────────────────────┘  └──────────────────────┘        │  │    │
+│  │  │                                                                                      │  │    │
+│  │  │  Cross-instance SignalR coordination via Redis Backplane                             │  │    │
+│  │  └──────────────────────────────────────────────────────────────────────────────────────┘  │    │
+│  │                                  │                                                          │    │
+│  │       ┌───────────────────────────┼───────────────────────────┐                             │    │
+│  │       │                           │                           │                             │    │
+│  │       ▼                           ▼                           ▼                             │    │
+│  │  ┌─────────────────┐   ┌─────────────────────┐   ┌──────────────────────────┐              │    │
+│  │  │ Amazon RDS      │   │ Amazon ElastiCache   │   │ Amazon S3 + CloudFront   │              │    │
+│  │  │ (PostgreSQL)    │   │ (Redis)              │   │                          │              │    │
+│  │  │                 │   │                      │   │  • 3D Models             │              │    │
+│  │  │ • Primary       │   │ • Sessions           │   │  • Textures              │              │    │
+│  │  │ • Read Replica  │   │ • Location Cache     │   │  • Animations            │              │    │
+│  │  │                 │   │ • Rec. Cache         │   │                          │              │    │
+│  │  │ • User Data     │   │ • SignalR Backplane  │   └──────────────────────────┘              │    │
+│  │  │ • Business Data │   │ • Real-time State    │                                             │    │
+│  │  │ • Analytics     │   │                      │                                             │    │
+│  │  │ • Audit Log     │   └─────────────────────┘                                              │    │
+│  │  └─────────────────┘                                                                        │    │
+│  │                                                                                            │    │
+│  │  ┌──────────────────────────────────────────────────────────────────────────────────────┐  │    │
+│  │  │                              External Services                                       │  │    │
+│  │  │                                                                                      │  │    │
+│  │  │  ┌─────────────────────────────┐      ┌─────────────────────────────┐               │  │    │
+│  │  │  │ Mapbox API                  │      │ Stripe / Paystack            │               │  │    │
+│  │  │  │ • Map Tiles                 │      │ • Business Subscriptions     │               │  │    │
+│  │  │  │ • 3D Buildings              │      │ • Payment Processing         │               │  │    │
+│  │  │  │ • Geocoding                 │      │                             │               │  │    │
+│  │  │  └─────────────────────────────┘      └─────────────────────────────┘               │  │    │
+│  │  └──────────────────────────────────────────────────────────────────────────────────────┘  │    │
+│  └────────────────────────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                                     │
+│  Legend:                                                                                            │
+│  ┌─────────────────┐  AWS Managed Service                                                           │
+│  ┌─────────────────┐  Third-Party Service                                                           │
+│  ────  Network Traffic                                                                              │
+│  Note: af-south-1 selected for lowest latency to Nigerian users                                    │
+│                                                                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+
+---
+
+## Change History
+- v1.0 – 2026-05-10 – Applied Elios Technology Documentation Standards (Antigravity)
