@@ -4,8 +4,17 @@ using AbujaSocialMetaverse.Shared.Configuration;
 using AbujaSocialMetaverse.Shared.Configuration.Options;
 using DotNetEnv;
 
-// Load .env
-Env.Load();
+// Determine the correct path to the .env file
+var currentDir = Directory.GetCurrentDirectory();
+var envPath = Path.Combine(currentDir, ".env");
+if (!File.Exists(envPath))
+{
+    // Try two directories up (if running from src/AbujaSocialMetaverse.API)
+    envPath = Path.GetFullPath(Path.Combine(currentDir, "..", "..", ".env"));
+}
+Console.WriteLine($"[DEBUG] Looking for .env at: {envPath}");
+Console.WriteLine($"[DEBUG] File exists? {File.Exists(envPath)}");
+Env.Load(envPath);
 
 // Map env vars into IConfiguration
 var envMappings = new Dictionary<string, string?>
