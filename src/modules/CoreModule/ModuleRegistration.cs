@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using AbujaSocialMetaverse.Modules.Core.Internal.Providers;
 using AbujaSocialMetaverse.Modules.Core.Internal.Services;
 using AbujaSocialMetaverse.Modules.Core.Public.Interfaces;
 
@@ -25,7 +26,13 @@ public static class ModuleRegistration
         // Session & Auth Services
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAccountVerificationService, AccountVerificationService>();
         
+        // Email Providers
+        services.AddScoped<IEmailProvider, SmtpEmailProvider>();
+
+        // Email Service
+        services.AddScoped<IEmailService, EmailService>();
         return services;
     }
 }
