@@ -1,0 +1,33 @@
+# Build results
+bin/
+obj/
+[Bb]uild/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# User secrets
+appsettings.*.json
+secrets.json
+
+# Logs
+*.log
+
+# Databases
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+data/
+logs/
+.env
+
+.sixth/
+.sixth/**

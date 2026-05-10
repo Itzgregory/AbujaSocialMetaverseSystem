@@ -4,17 +4,8 @@ using AbujaSocialMetaverse.Shared.Configuration;
 using AbujaSocialMetaverse.Shared.Configuration.Options;
 using DotNetEnv;
 
-// Determine the correct path to the .env file
-var currentDir = Directory.GetCurrentDirectory();
-var envPath = Path.Combine(currentDir, ".env");
-if (!File.Exists(envPath))
-{
-    // Try two directories up (if running from src/AbujaSocialMetaverse.API)
-    envPath = Path.GetFullPath(Path.Combine(currentDir, "..", "..", ".env"));
-}
-Console.WriteLine($"[DEBUG] Looking for .env at: {envPath}");
-Console.WriteLine($"[DEBUG] File exists? {File.Exists(envPath)}");
-Env.Load(envPath);
+// Load .env from current or parent directories
+Env.TraversePath().Load();
 
 // Map env vars into IConfiguration
 var envMappings = new Dictionary<string, string?>
@@ -38,7 +29,6 @@ var envMappings = new Dictionary<string, string?>
     ["Stripe:WebhookSecret"] = Env.GetString("STRIPE_WEBHOOK_SECRET"),
     ["Paystack:SecretKey"] = Env.GetString("PAYSTACK_SECRET_KEY"),
     ["Paystack:BaseUrl"] = Env.GetString("PAYSTACK_BASE_URL"),
-    ["Cors:AllowedOrigins"] = Env.GetString("CORS_ALLOWED_ORIGINS"),
     ["Logging:MinimumLevel"] = Env.GetString("LOG_LEVEL"),
     ["Logging:FilePath"] = Env.GetString("LOG_FILE_PATH"),
     ["RateLimit:PermitLimit"] = Env.GetString("RATE_LIMIT_PERMIT_LIMIT"),
@@ -53,6 +43,16 @@ var envMappings = new Dictionary<string, string?>
     ["Email:FromName"] = Env.GetString("EMAIL_FROM_NAME"),
     ["Email:BaseUrl"] = Env.GetString("EMAIL_BASE_URL"),
 };
+
+// Parse comma-separated CORS origins into configuration array format
+var corsOrigins = Env.GetString("CORS_ALLOWED_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries);
+if (corsOrigins != null)
+{
+    for (int i = 0; i < corsOrigins.Length; i++)
+    {
+        envMappings[$"Cors:AllowedOrigins:{i}"] = corsOrigins[i].Trim();
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
