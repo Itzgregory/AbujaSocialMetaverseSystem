@@ -4,15 +4,19 @@ using AbujaSocialMetaverse.Infrastructure.Data;
 using AbujaSocialMetaverse.Modules.Core.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using AbujaSocialMetaverse.Shared.Constants;
+using AbujaSocialMetaverse.Shared.Exceptions;
 using AbujaSocialMetaverse.Shared.Helpers;
 using AbujaSocialMetaverse.Shared.Models;
 using AbujaSocialMetaverse.Shared.Validators;
 using Microsoft.Extensions.Logging;
 using AbujaSocialMetaverse.Modules.Core.Internal.Mappers;
-using AbujaSocialMetaverse.Shared.Exceptions;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
 
+/// <summary>
+/// Handles core authentication workflows: registration, login, token refresh, and session revocation.
+/// Email verification and password reset are handled by <see cref="AccountVerificationService"/>.
+/// </summary>
 public class AuthService : BaseService, IAuthService
 {
     private readonly IUserCreationService _userCreationService;
@@ -84,7 +88,8 @@ public class AuthService : BaseService, IAuthService
             if (!userResult.IsSuccess || userResult.Value is null)
             {
                 return Result<AuthResponse>.Failure(
-                    userResult.Error ?? new ResultError(ErrorCodes.Validation.InternalError, "Failed to create user.", ErrorType.ServerError));
+                    userResult.Error ?? new ResultError(ErrorCodes.Validation.InternalError, "Failed to create user.",
+                        ErrorType.ServerError));
             }
 
             _logger.LogInformation("User registered: {Email} with ID {UserId}", request.Email, userResult.Value.Id);
@@ -94,7 +99,8 @@ public class AuthService : BaseService, IAuthService
                 string.Empty,
                 string.Empty,
                 DateTimeOffset.UtcNow,
-                new UserDto(Guid.Empty, string.Empty, string.Empty, null, null, SocialMode.Leisure, DateTimeOffset.UtcNow, false, false)));
+                new UserDto(Guid.Empty, string.Empty, string.Empty, null, null, SocialMode.Leisure,
+                    DateTimeOffset.UtcNow, false, false)));
         }, cancellationToken);
     }
 
@@ -114,7 +120,8 @@ public class AuthService : BaseService, IAuthService
             if (!userResult.IsSuccess || userResult.Value is null)
             {
                 return Result<AuthResponse>.Failure(
-                    new ResultError(ErrorCodes.Auth.InvalidCredentials, "Invalid email or password.", ErrorType.Validation));
+                    new ResultError(ErrorCodes.Auth.InvalidCredentials, "Invalid email or password.",
+                        ErrorType.Validation));
             }
 
             var user = userResult.Value;
@@ -125,7 +132,8 @@ public class AuthService : BaseService, IAuthService
                 return Result<AuthResponse>.Failure(lockoutCheck.Error!);
             }
 
-            var passwordCheck = await VerifyPasswordAndHandleLockoutAsync(user.Id, request.Password, user.PasswordHash, ct);
+            var passwordCheck =
+                await VerifyPasswordAndHandleLockoutAsync(user.Id, request.Password, user.PasswordHash, ct);
             if (!passwordCheck.IsSuccess)
             {
                 return Result<AuthResponse>.Failure(passwordCheck.Error!);
@@ -141,7 +149,8 @@ public class AuthService : BaseService, IAuthService
             if (!sessionResult.IsSuccess || sessionResult.Value is null)
             {
                 return Result<AuthResponse>.Failure(
-                    new ResultError(ErrorCodes.Validation.InternalError, "Failed to create session.", ErrorType.ServerError));
+                    new ResultError(ErrorCodes.Validation.InternalError, "Failed to create session.",
+                        ErrorType.ServerError));
             }
 
             var tokens = sessionResult.Value;
@@ -223,22 +232,7 @@ public class AuthService : BaseService, IAuthService
         return await RevokeTokenAsync(userId, jti, cancellationToken);
     }
 
-    public async Task<bool> ValidateTokenAsync(
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _tokenService.ValidateAccessTokenAsync(accessToken, cancellationToken);
-        return result.IsSuccess;
-    }
-
-    public async Task<Result<Guid>> GetUserIdFromTokenAsync(
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        return await _tokenService.ValidateAccessTokenAsync(accessToken, cancellationToken);
-    }
-
-    // Private helper methods for LoginAsync
+    // ─── Private Helpers for LoginAsync ───────────────────────────────
 
     private async Task<Result<User>> GetAndValidateUserAsync(string email, CancellationToken ct)
     {
@@ -334,7 +328,8 @@ public class AuthService : BaseService, IAuthService
         if (!sessionResult.IsSuccess || sessionResult.Value is null)
         {
             return Result<TokenResult>.Failure(
-                new ResultError(ErrorCodes.Validation.InternalError, "Failed to create user session.", ErrorType.ServerError));
+                new ResultError(ErrorCodes.Validation.InternalError, "Failed to create user session.",
+                    ErrorType.ServerError));
         }
 
         return Result<TokenResult>.Success(sessionResult.Value);

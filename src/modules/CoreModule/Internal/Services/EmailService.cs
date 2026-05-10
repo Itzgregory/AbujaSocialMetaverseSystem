@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AbujaSocialMetaverse.Modules.Core.Internal.Services;
-
 /// <summary>
 ///     Represents the email service for sending emails.
 /// </summary>
